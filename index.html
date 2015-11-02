@@ -1,0 +1,35 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<script src="/socket.io/socket.io.js"></script>
+<script type ="text/javascript">
+	var socketio = io.connect();
+	var userName;
+	socketio.on("message_to_client",function(data) {
+	   //show the names of new chat rooms
+	   if(data["name"]){
+		   var nLI = document.createElement('li');
+		   nLI.innerHTML = data['name'];
+		   document.getElementById("rooms").appendChild(nLI);
+	   }
+	});
+	
+	function createNew(){
+		roomName = prompt("Name of New Room");
+		socketio.emit("message_to_server", {name:roomName, user:userName, pw:null});
+	}
+	function userName(){
+		userName = prompt("Pick a User Name");
+		socketio.emit("message_to_server", {userName:userName});
+	}
+</script>
+<meta charset="utf-8">
+<title>Chat Rooms</title>
+</head>
+
+<body onLoad="userName()">
+	<ul id="rooms">
+    </ul>
+    <a href="#" onClick="createNew()">create</a>
+</body>
+</html>
