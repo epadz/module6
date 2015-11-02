@@ -61,11 +61,13 @@ io.sockets.on("connection", function(socket){
 			console.log("roomName: "+data["name"]); // log it to the Node.JS output
 			io.sockets.emit("message_to_client",{name:data["name"] }) // broadcast the message to other users
 			
-			rooms[rooms.length] = {
+			rooms.push({
 				name:data["name"] + "",
 				pw:data["pw"],
+				admin: data["user"] + "",
 				users: [data["user"] + ""]
-			}
+			});
+			console.log(JSON.stringify(rooms));
 		}else if(data["userName"]){
 			console.log("userName: "+ data["userName"]); // log it to the Node.JS output
 			//needs to check if user exists
