@@ -1,28 +1,113 @@
 <!DOCTYPE html>
 <html>
-   <head>
-      <script src="/socket.io/socket.io.js"></script>
-      <script type ="text/javascript">
- 
-      var socketio = io.connect();
-      socketio.on("message_to_client",function(data) {
-         //Append an HR thematic break and the escaped HTML of the new message
-         if(data["message"]){
-			 document.getElementById("chatlog").appendChild(document.createElement("hr"));
-	         document.getElementById("chatlog").appendChild(document.createTextNode(data['message']));
-		 }
-      });
- 
-      function sendMessage(){
-         var msg = document.getElementById("message_input").value;
-         socketio.emit("message_to_server", {message:msg});
-      }
- 
-      </script>
-   </head>
-   <body>
-      <input type="text" id="message_input"/>
-      <button onclick="sendMessage()">send</button>
-      <div id="chatlog"></div>
-   </body>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat App</title>
+<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script type ="text/javascript">
+var username = null;
+var uid = null;
+var socketio = io.connect();
+var x;
+socketio.on('connect', function(){
+	socketio.emit('newUser', prompt("Please enter a username"));
+	//socketio.emit('newUser', "temp");
+})
+
+socketio.on("unResponse",function(data){
+	username = data.un;
+	uid = data.uid;
+});
+
+socketio.on("roomList",function(data){
+	document.getElementById('roomList').innerHTML = "";
+	for(i = 0; i < data.length; i++){
+		var rlItem = document.createElement('li');
+		var rliTitle = document.createElement('div');
+		rliTitle.setAttribute("class","rliTitle");
+		rlItem.setAttribute("onClick", "enterRoom(" + i + ")");
+		rliTitle.innerHTML = data[i].name + "";
+		rlItem.appendChild(rliTitle);
+		rlUsers = document.createElement('div');
+		rlUsers.setAttribute('class','rlUsers');
+		
+		usrList = data[i].users;
+		for(j = 0; j < usrList.length; j++){
+			var uicon = document.createElement('div');
+			uicon.setAttribute("class","rlUIcon");
+			uicon.style.backgroundImage = 'url("icons/' + usrList[j].uid + '.svg")';
+			rlUsers.appendChild(uicon);
+		}
+		rlItem.appendChild(rlUsers);
+		document.getElementById('roomList').appendChild(rlItem);
+	}
+});
+
+function addRoom(){
+	nName = prompt("please name the room");
+	nPw = null;
+	if(confirm("Would you like to password protect your room?")){
+		nPw = prompt("What would you like the password to be?");
+	}
+	nRoomData = {
+		name:nName,
+		pw:nPw,
+		admin:username,
+		users: []
+	};
+	socketio.emit('newRoom',nRoomData);
+}
+
+function enterRoom(rid){
+	socketio.emit('enterRoom',rid);
+}
+
+socketio.on('enterRoomAlert', function(data){
+	$("#infoBar").html(data.name + "");
+	$("#chatlog").html('');
+});
+
+socketio.on("message_to_client",function(data) {
+   //Append an HR thematic break and the escaped HTML of the new message
+   if(data["message"]){
+	   document.getElementById("chatlog").appendChild(document.createElement("hr"));
+	   document.getElementById("chatlog").appendChild(document.createTextNode(data['poster'] + ": " + data['message']));
+   }
+});
+
+function sendMessage(){
+   var msg = document.getElementById("mtext").value;
+   socketio.emit("message_to_server", {message:msg});
+}
+
+$(document).keyup(function(e) {
+	if(e.which == 13 && $("#mtext").val()!= "\n"){
+		sendMessage();
+		$("#mtext").html("");
+   		$("#mtext").val("");
+	}else if(e.which == 13 && $("#mtext").val()== "\n"){
+		$("#mtext").html("");
+   		$("#mtext").val("");
+	}
+});
+
+</script>
+<link href="style.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+	<div id="rooms">
+    	<ul id="roomList">
+        
+        </ul>
+        <div id="addNew" onClick="addRoom()">Add New Room</div>
+    </div>
+    <div id="chat">
+    	<div id="infoBar">Open Forum</div>
+		<div id="chatlog"></div>
+        <div id="minput">
+        	<textarea id="mtext" placeholder="write your message here"></textarea>
+        </div>
+    </div>      
+</body>
 </html>
