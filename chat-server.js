@@ -10,7 +10,9 @@ var rooms = [{
 	name:'Open Forum',
 	pw:null,
 	admin: null,
-	users: []
+	users: [],
+	private: false,
+	banned: []
 }];
 var users = [];
 var rid = 1;
