@@ -101,7 +101,8 @@ io.sockets.on("connection", function(socket){
 		socket.join(data + "");
 		socket.room = data + "";
 		rooms[parseInt(socket.room)].users.push(socket.info);
-		socket.emit("enterRoomAlert",rooms);
+		socket.emit("enterRoomAlert",rooms[parseInt(socket.room)]);
+		io.sockets.emit('roomList', rooms);
 	});
 	
 	socket.on('message_to_server', function(data) {

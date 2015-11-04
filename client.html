@@ -71,8 +71,14 @@ socketio.on('enterRoomAlert', function(data){
 socketio.on("message_to_client",function(data) {
    //Append an HR thematic break and the escaped HTML of the new message
    if(data["message"]){
-	   document.getElementById("chatlog").appendChild(document.createElement("hr"));
-	   document.getElementById("chatlog").appendChild(document.createTextNode(data['poster'] + ": " + data['message']));
+	   mdiv = document.createElement('div');
+	   if(data.poster == username){
+		   mdiv.setAttribute('class','mymessage');
+	   }else{
+		   mdiv.setAttribute('class','message');
+	   }	   
+	   mdiv.innerHTML = data['poster'] + ": " + data['message'];
+	   document.getElementById("chatlog").appendChild(mdiv);
    }
 });
 
