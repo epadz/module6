@@ -36,6 +36,7 @@ socketio.on("roomList",function(data){
 		for(j = 0; j < usrList.length; j++){
 			var uicon = document.createElement('div');
 			uicon.setAttribute("class","rlUIcon");
+			uicon.setAttribute("title",usrList[j].un + "");
 			uicon.style.backgroundImage = 'url("icons/' + usrList[j].uid + '.svg")';
 			rlUsers.appendChild(uicon);
 		}
