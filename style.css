@@ -90,6 +90,7 @@ input{
 	padding:5px;
 	cursor:text;
 	width:auto;
+	z-index:1000;
 }
 .rlUIcon:hover .uiOptions{
 	display:block;

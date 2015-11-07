@@ -25,6 +25,10 @@ socketio.on("unResponse",function(data){
 	userData = data;
 });
 
+socketio.on("unTaken",function(data){
+	socketio.emit('newUser', prompt(data + " was taken. Please try another username"));
+});
+
 socketio.on("roomList",function(data){
 	document.getElementById('roomList').innerHTML = "";
 	for(i = 0; i < data.length; i++){
@@ -106,14 +110,16 @@ socketio.on("giveUsers",function(data) {
 	nrButton = document.getElementById('nrCreateTD');
 	$("#nrCreateTD").remove();
 	$.each(data, function(i, u){
-		nrUsrTR = document.createElement('tr');
-		nrUsrTR.setAttribute("class", "nrUser");
-		if(i == uid){
-			nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" disabled checked></td>';
-		}else{
-			nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" checked></td>';
-		}		
-		document.getElementById('nrTable').appendChild(nrUsrTR);
+		if(!u["disconnected"]){
+			nrUsrTR = document.createElement('tr');
+			nrUsrTR.setAttribute("class", "nrUser");
+			if(i == uid){
+				nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" disabled checked></td>';
+			}else{
+				nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" checked></td>';
+			}		
+			document.getElementById('nrTable').appendChild(nrUsrTR);
+		}
 	});
 	document.getElementById('nrTable').appendChild(nrButton);
 	$("input[id^='nrAllow']").off("change");

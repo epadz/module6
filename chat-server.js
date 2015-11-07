@@ -75,22 +75,30 @@ io.sockets.on("connection", function(socket){
 			un: data,
 			uid: users.length
 		};
-		users.push(usrIfo);
 		
-		clients.push(socket)
-		//console.log(users.toString());
-		
-		socket.emit('unResponse', usrIfo);
-		socket.un = data;
-		socket.uid = usrIfo.uid;
-		socket.info = usrIfo;
-		
-		rooms[0].users.push(usrIfo);
-		
-		io.sockets.emit('roomList', rooms);
-		socket.join("0");
-		socket.room = "0";
-		//console.log(JSON.stringify(rooms));
+		names = users.filter(function(val){
+			return val.un == data;
+		});
+		if(names.length > 0){
+			socket.emit('unTaken', data);
+		}else{
+			users.push(usrIfo);
+			
+			clients.push(socket)
+			//console.log(users.toString());
+			
+			socket.emit('unResponse', usrIfo);
+			socket.un = data;
+			socket.uid = usrIfo.uid;
+			socket.info = usrIfo;
+			
+			rooms[0].users.push(usrIfo);
+			
+			io.sockets.emit('roomList', rooms);
+			socket.join("0");
+			socket.room = "0";
+			//console.log(JSON.stringify(rooms));
+		}
 	});
 	
 	
@@ -136,7 +144,7 @@ io.sockets.on("connection", function(socket){
 	});
 	
 	socket.on('kickOut', function(data){
-		if(socket.uid == rooms[parseInt(data.rid)].admin){//checks to make sure it is the admin issuing the request		
+		if(socket.uid == rooms[parseInt(data.rid)].admin && clients[data.uid].connected){//checks to make sure it is the admin issuing the request and client is still connected		
 			rooms[parseInt(clients[data.uid].room)].users = rooms[parseInt(clients[data.uid].room)].users.filter(function(val){
 				return val.uid != clients[data.uid].uid;
 			});//removes user from rooms[room].users		
@@ -150,7 +158,7 @@ io.sockets.on("connection", function(socket){
 		}
 	});
 	socket.on('ban', function(data){
-		if(socket.uid == rooms[parseInt(data.rid)].admin){//checks to make sure it is the admin issuing the request		
+		if(socket.uid == rooms[parseInt(data.rid)].admin && clients[data.uid].connected){//checks to make sure it is the admin issuing the request and client is still connected		
 			rooms[parseInt(clients[data.uid].room)].users = rooms[parseInt(clients[data.uid].room)].users.filter(function(val){
 				return val.uid != clients[data.uid].uid;
 			});//removes user from rooms[room].users		
@@ -166,13 +174,18 @@ io.sockets.on("connection", function(socket){
 	});
 	
 	socket.on('disconnect', function(){
-		console.log("disconnect: " + dis);
-		dis++;
-		rooms[parseInt(socket.room)].users = rooms[parseInt(socket.room)].users.filter(function(val){
-			return val.uid != socket.uid;
-		});//removes user from rooms[room].users		
-		socket.leave(socket.room);
-		socket.emit("enterRoomAlert",rooms);
+		if(typeof socket.uid !== 'undefined'){
+			console.log("disconnect: " + dis + " from " + socket.room + " by " + socket.uid);
+			dis++;
+			rooms[parseInt(socket.room)].users = rooms[parseInt(socket.room)].users.filter(function(val){
+				return val.uid != socket.uid;
+			});//removes user from rooms[room].users		
+			socket.leave(socket.room);
+			
+			users[parseInt(socket.uid)].disconnected = true;
+			
+			io.sockets.emit('roomList', rooms);
+		}
 	});
 	
 });
