@@ -1,13 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chat App</title>
-<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 <script type ="text/javascript">
 var username = null;
 var uid = null;
+var userData = null;
 var socketio = io.connect();
 var x;
 socketio.on('connect', function(){
@@ -18,52 +22,66 @@ socketio.on('connect', function(){
 socketio.on("unResponse",function(data){
 	username = data.un;
 	uid = data.uid;
+	userData = data;
 });
 
 socketio.on("roomList",function(data){
 	document.getElementById('roomList').innerHTML = "";
 	for(i = 0; i < data.length; i++){
-		var rlItem = document.createElement('li');
-		var rliTitle = document.createElement('div');
-		rliTitle.setAttribute("class","rliTitle");
-		rlItem.setAttribute("onClick", "enterRoom(" + i + ")");
-		rliTitle.innerHTML = data[i].name + "";
-		rlItem.appendChild(rliTitle);
-		rlUsers = document.createElement('div');
-		rlUsers.setAttribute('class','rlUsers');
+		rlBanned = data[i].banned;
 		
-		usrList = data[i].users;
-		for(j = 0; j < usrList.length; j++){
-			var uicon = document.createElement('div');
-			uicon.setAttribute("class","rlUIcon");
-			uicon.setAttribute("title",usrList[j].un + "");
-			uicon.style.backgroundImage = 'url("icons/' + usrList[j].uid + '.svg")';
-			rlUsers.appendChild(uicon);
+		if(rlBanned.indexOf(uid) == -1 && (data[i].openTo.length == 0 || data[i].openTo.indexOf(uid) != -1)){
+			var rlItem = document.createElement('li');
+			var rliTitle = document.createElement('span');
+			rliTitle.setAttribute("class","rliTitle");
+			rlItem.setAttribute("data-roomnum", i);
+			rlItem.setAttribute("data-haspass", data[i].pw != null);
+			rliTitle.innerHTML = data[i].name + "";
+			rliTitle.setAttribute("onClick", "enterRoom(" + i + ")");
+			rlItem.appendChild(rliTitle);
+			rlUsers = document.createElement('div');
+			rlUsers.setAttribute('class','rlUsers');
+			
+			usrList = data[i].users;
+			for(j = 0; j < usrList.length; j++){
+				var uicon = document.createElement('div');
+				uicon.setAttribute("class","rlUIcon");
+				uicon.setAttribute("data-uid",usrList[j].uid + "");
+				uicon.style.backgroundImage = 'url("icons/' + usrList[j].uid + '.svg")';
+				var uiOpts = '<div class="uiOptions">';
+				
+				if(parseInt(usrList[j].uid) != parseInt(uid)){
+					uiOpts += usrList[j].un + "&nbsp;&nbsp;&nbsp;<span class=\"tti\" onClick=\"sendMessageTo(" + usrList[j].uid + ", '" + usrList[j].un + "')\">message</span>";
+				//message user: create new room visible to just you and the user
+				//if you're the admin?
+					if(parseInt(data[i].admin) == parseInt(uid)){
+						uiOpts += "&nbsp;<span class=\"tti\" onClick=\"kickOut(" + usrList[j].uid + ", " + i + ")\">boot</span>&nbsp;<span class=\"tti\" onClick=\"ban(" + usrList[j].uid + ", " + i + ")\">ban</span>";
+					}
+				//kick out user
+				//ban user
+				}else{
+					uiOpts += "you";
+				}
+				uiOpts += '</div>';
+				uicon.innerHTML = uiOpts;
+				rlUsers.appendChild(uicon);
+			}
+			rlItem.appendChild(rlUsers);
+			document.getElementById('roomList').appendChild(rlItem);
 		}
-		rlItem.appendChild(rlUsers);
-		document.getElementById('roomList').appendChild(rlItem);
 	}
 });
 
-function addRoom(){
-	nName = prompt("please name the room");
-	nPw = null;
-	if(confirm("Would you like to password protect your room?")){
-		nPw = prompt("What would you like the password to be?");
-	}
-	nRoomData = {
-		name:nName,
-		pw:nPw,
-		admin:username,
-		users: []
-	};
-	socketio.emit('newRoom',nRoomData);
-}
-
 function enterRoom(rid){
-	socketio.emit('enterRoom',rid);
+	if($("[data-roomnum='" + rid + "']").eq(0).attr("data-haspass") == "true"){
+		socketio.emit('enterRoom',{r: rid, p: prompt("what is the password?")});
+	}else{
+		socketio.emit('enterRoom',{r: rid, p: null});
+	}
 }
-
+socketio.on('wrongPass', function(data){
+	alert("wrong password");
+});
 socketio.on('enterRoomAlert', function(data){
 	$("#infoBar").html(data.name + "");
 	$("#chatlog").html('');
@@ -83,9 +101,60 @@ socketio.on("message_to_client",function(data) {
    }
 });
 
+socketio.on("giveUsers",function(data) {
+	$(".nrUser").remove();
+	nrButton = document.getElementById('nrCreateTD');
+	$("#nrCreateTD").remove();
+	$.each(data, function(i, u){
+		nrUsrTR = document.createElement('tr');
+		nrUsrTR.setAttribute("class", "nrUser");
+		if(i == uid){
+			nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" disabled checked></td>';
+		}else{
+			nrUsrTR.innerHTML = '<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/' + i + '.svg)"></div></td><td colspan="2">' + u.un + '</td><td colspan="1"><input type="checkbox" id="nrAllow' + i + '" data-for="' + i + '" checked></td>';
+		}		
+		document.getElementById('nrTable').appendChild(nrUsrTR);
+	});
+	document.getElementById('nrTable').appendChild(nrButton);
+	$("input[id^='nrAllow']").off("change");
+	$("input[id^='nrAllow']").change(function(e){
+		if(!$(this).is(":checked")){
+			openToAll(false);
+		}
+		if($("input[id^='nrAllow']:checked").length == $("input[id^='nrAllow']").length){
+			openToAll(true);
+		}
+	});
+	$("#nrOpen").off("change");
+	$("#nrOpen").change(function(e) {
+		if($("#nrOpen").is(":checked")){
+			openToAll(true);
+		}
+	});
+});
+
+socketio.on("kickedOut",function(data) {
+	alert("You got kicked out of that room!");
+});
+socketio.on("banned",function(data) {
+	alert("You got banned from that room!");
+});
 function sendMessage(){
    var msg = document.getElementById("mtext").value;
    socketio.emit("message_to_server", {message:msg});
+}
+function newRoomBox(show){
+	if(show){
+		$("#addRoom").css("display","block");
+		$("#addRoom input[type=\"text\"], #addRoom input[type=\"password\"]").val("");
+		askUsers();
+		openToAll(true);
+	}else{
+		$("#addRoom").css("display","none");
+	}
+}
+function askUsers(){
+	socketio.emit("askUsers", {});
 }
 
 $(document).keyup(function(e) {
@@ -98,23 +167,95 @@ $(document).keyup(function(e) {
    		$("#mtext").val("");
 	}
 });
-
+function openToAll(is){
+	if(is){
+		$("input[id^='nrAllow']").prop("checked", true);
+		$("#nrOpen").prop("checked", true);
+	}else{
+		$("#nrOpen").removeAttr("checked");
+	}
+}
+//submiting the create room form
+function subCrRoom(){
+	if($("#nrName").val() && $("#nrName").val() != "" && $("#nrName").val() != " "){	
+		nrd = {}
+		nrd.name = $("#nrName").val() + "";
+		nrd.pw = null;
+		nrd.private = false;
+		if($("#nrPass").val() && $("#nrPass").val() != ""){
+			nrd.pw = $("#nrPass").val();
+			nrd.private = true;
+		}
+		nrd.isMessage = false;
+		nrd.admin = uid;
+		nrd.users = [];
+		nrd.banned = [];//who can't see the room
+		$("input[id^='nrAllow']").not(":checked").each(function(i) {
+            nrd.banned.push(parseInt($(this).attr("data-for")));
+        });
+		nrd.openTo = [];
+		socketio.emit('newRoom',nrd);
+		newRoomBox(false);
+	}else{
+		alert("Please name your room!");
+	}
+}
+function sendMessageTo(u, uName){
+	nrd = {}
+		nrd.name = "Chat Between " + username + " and " + uName;
+		nrd.pw = null;
+		nrd.private = true;
+		nrd.isMessage = true;
+		nrd.admin = uid;
+		nrd.users = [];
+		nrd.banned = [];//who can't see the room
+		nrd.openTo = [u, uid];
+		socketio.emit('newRoom',nrd);
+}
+function kickOut(u, rid){
+	socketio.emit('kickOut',{uid: u, rid: rid});
+}
+function ban(u, rid){
+	socketio.emit('ban',{uid: u, rid: rid});
+}
 </script>
 <link href="style.css" rel="stylesheet" type="text/css">
 </head>
 <body>
+	<div id="infoBar">Open Forum</div>
 	<div id="rooms">
     	<ul id="roomList">
         
         </ul>
-        <div id="addNew" onClick="addRoom()">Add New Room</div>
+        <div id="addNew" onClick="newRoomBox(true)">+</div>
     </div>
     <div id="chat">
-    	<div id="infoBar">Open Forum</div>
 		<div id="chatlog"></div>
         <div id="minput">
         	<textarea id="mtext" placeholder="write your message here"></textarea>
         </div>
     </div>      
+    <div id="addRoom">
+    	<table id="nrTable"><tbody>
+        	<tr>
+            	<td colspan="4"><input type="text" id="nrName" placeholder="Room Name"></td>
+            </tr>
+            <tr>
+            	<td colspan="4"><input type="password" id="nrPass" placeholder="Password (optional)"></td>
+            </tr>
+            <tr>
+            	<td colspan="4"><input type="checkbox" id="nrOpen" checked><label for="nrOpen">Visible to all</label></td>
+            </tr>
+            <tr class="nrUser">
+            	<td colspan="1"><div class="rlUIcon" style="background-image:url(icons/0.svg)"></div></td>
+                <td colspan="2">steve</td>
+                <td colspan="1"><input type="checkbox" id="nrAllow1" data-for="0" checked></td>
+            </tr>
+            <tr id="nrCreateTD">
+            	<td colspan="2"><div id="nrCreate" onClick="subCrRoom()">create</div></td>
+                <td colspan="2"><div id="nrCancel" onClick="newRoomBox(false)">cancel</div></td>
+            </tr>        
+        </tbody></table>
+    </div>
 </body>
 </html>
