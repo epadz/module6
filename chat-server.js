@@ -11,10 +11,13 @@ var rooms = [{
 	pw:null,
 	admin: null,
 	users: [],
+	isMessage: false,
 	private: false,
-	banned: []
+	banned: [],
+	openTo: [],
 }];
 var users = [];
+var clients = [];
 var rid = 1;
 var uid = 0;
 var mid = 0;
@@ -65,6 +68,7 @@ io.sockets.on("connection", function(socket){
 	// This callback runs when a new Socket.IO connection is established.
 	console.log("connect: " + con);
 	con++;
+	console.log(socket.id);
 	
 	socket.on('newUser', function(data){
 		usrIfo = {
@@ -72,6 +76,8 @@ io.sockets.on("connection", function(socket){
 			uid: users.length
 		};
 		users.push(usrIfo);
+		
+		clients.push(socket)
 		//console.log(users.toString());
 		
 		socket.emit('unResponse', usrIfo);
@@ -91,22 +97,34 @@ io.sockets.on("connection", function(socket){
 	socket.on('newRoom', function(data){
 		rooms[rid] = data;
 		rid++;
-		//console.log(JSON.stringify(rooms));
+		console.log("New Room" + JSON.stringify(rooms));
 		io.sockets.emit('roomList', rooms);
 	});
 	
 	socket.on('enterRoom', function(data){
-		rooms[parseInt(socket.room)].users = rooms[parseInt(socket.room)].users.filter(function(val){
-			return val.uid != socket.uid;
-		});//removes user from rooms[room].users		
-		socket.leave(socket.room);
-		socket.join(data + "");
-		socket.room = data + "";
-		rooms[parseInt(socket.room)].users.push(socket.info);
-		socket.emit("enterRoomAlert",rooms[parseInt(socket.room)]);
-		io.sockets.emit('roomList', rooms);
+		console.log(JSON.stringify(data));
+		console.log(JSON.stringify(rooms));
+		console.log(data.p != null);
+		console.log(data.p == rooms[parseInt(data.r)].pw);
+		var pwCorrect = data.p != null && data.p == rooms[parseInt(data.r)].pw;
+		if(data.p == null || pwCorrect){
+			console.log("good");
+			rooms[parseInt(socket.room)].users = rooms[parseInt(socket.room)].users.filter(function(val){
+				return val.uid != socket.uid;
+			});//removes user from rooms[room].users		
+			socket.leave(socket.room);
+			socket.join(data.r + "");
+			socket.room = data.r + "";
+			rooms[parseInt(socket.room)].users.push(socket.info);
+			socket.emit("enterRoomAlert",rooms[parseInt(socket.room)]);
+			io.sockets.emit('roomList', rooms);
+		}else{
+			socket.emit("wrongPass", "");
+		}
 	});
-	
+	socket.on('askUsers', function(data){
+		socket.emit("giveUsers", users);
+	});
 	socket.on('message_to_server', function(data) {
 		// This callback runs when the server receives a new message from the client.
  		if(data["message"])
@@ -115,6 +133,36 @@ io.sockets.on("connection", function(socket){
 			io.sockets.to(socket.room).emit("message_to_client",{poster: socket.un + "", message:data["message"] }) // broadcast the message to other users
 			
 		}		
+	});
+	
+	socket.on('kickOut', function(data){
+		if(socket.uid == rooms[parseInt(data.rid)].admin){//checks to make sure it is the admin issuing the request		
+			rooms[parseInt(clients[data.uid].room)].users = rooms[parseInt(clients[data.uid].room)].users.filter(function(val){
+				return val.uid != clients[data.uid].uid;
+			});//removes user from rooms[room].users		
+			clients[data.uid].leave(clients[data.uid].room);
+			clients[data.uid].join(0 + "");
+			clients[data.uid].room = 0 + "";
+			rooms[parseInt(clients[data.uid].room)].users.push(clients[data.uid].info);
+			clients[data.uid].emit("enterRoomAlert",rooms[parseInt(clients[data.uid].room)]);
+			io.sockets.emit('roomList', rooms);		
+			clients[data.uid].emit("kickedOut","");	
+		}
+	});
+	socket.on('ban', function(data){
+		if(socket.uid == rooms[parseInt(data.rid)].admin){//checks to make sure it is the admin issuing the request		
+			rooms[parseInt(clients[data.uid].room)].users = rooms[parseInt(clients[data.uid].room)].users.filter(function(val){
+				return val.uid != clients[data.uid].uid;
+			});//removes user from rooms[room].users		
+			clients[data.uid].leave(clients[data.uid].room);
+			clients[data.uid].join(0 + "");
+			clients[data.uid].room = 0 + "";
+			rooms[parseInt(clients[data.uid].room)].users.push(clients[data.uid].info);
+			clients[data.uid].emit("enterRoomAlert",rooms[parseInt(clients[data.uid].room)]);
+			rooms[parseInt(data.rid)].banned.push(parseInt(data.uid));
+			io.sockets.emit('roomList', rooms);		
+			clients[data.uid].emit("banned","");				
+		}
 	});
 	
 	socket.on('disconnect', function(){
