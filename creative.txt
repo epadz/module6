@@ -1,3 +1,14 @@
+Eliot Padzensky 435494
+Kenneth Geiler 431388
+
+// link to running instance
+http://ec2-52-88-111-193.us-west-2.compute.amazonaws.com:3456/client.html
+
+Creative elements:
+1)The CSS
+2)User icons
+
+Attribution:
 Bat by iconsmind.com from the Noun Project
 Butterfly by iconsmind.com from the Noun Project
 Alligator by iconsmind.com from the Noun Project
