@@ -25,7 +25,6 @@ var mid = 0;
 var dis = 0;
 var con = 0;
 
-//$.getScript("https://crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/aes.js", function(){});
 
 var app = http.createServer(function(req, resp){
 	var filename = path.join(__dirname, "", url.parse(req.url).pathname);
@@ -105,7 +104,7 @@ io.sockets.on("connection", function(socket){
 	
 	
 	socket.on('newRoom', function(data){
-		data.pw = CryptoJS.AES.encrypt(data.pw + "", "keyphrase");
+		data.pw = data.pw;
 		rooms[rid] = data;
 		rid++;
 		console.log("New Room" + JSON.stringify(rooms));
@@ -117,7 +116,7 @@ io.sockets.on("connection", function(socket){
 		console.log(JSON.stringify(rooms));
 		console.log(data.p != null);
 		console.log(data.p == rooms[parseInt(data.r)].pw);
-		var pwCorrect = data.p != null && CryptoJS.AES.encrypt(data.p, "keyphrase") == rooms[parseInt(data.r)].pw;
+		var pwCorrect = data.p != null && data.p == rooms[parseInt(data.r)].pw;
 		if(data.p == null || pwCorrect){
 			console.log("good");
 			rooms[parseInt(socket.room)].users = rooms[parseInt(socket.room)].users.filter(function(val){

@@ -16,9 +16,17 @@ var userData = null;
 var socketio = io.connect();
 var x;
 socketio.on('connect', function(){
-	socketio.emit('newUser', prompt("Please enter a username"));
+	socketio.emit('newUser', promptName("Please Enter a Username"));
 	//socketio.emit('newUser', "temp");
 })
+function promptName(m){
+	var newName = prompt(m + "");
+	if(newName == null || newName == "" || newName == " "){
+		return promptName("Invalid Input! Please Enter a Username");
+	}else{
+		return newName;
+	}
+}
 
 socketio.on("unResponse",function(data){
 	username = data.un;
@@ -27,7 +35,7 @@ socketio.on("unResponse",function(data){
 });
 
 socketio.on("unTaken",function(data){
-	socketio.emit('newUser', prompt(data + " was taken. Please try another username"));
+	socketio.emit('newUser', promptName(data + " was taken. Please try another username"));
 });
 
 socketio.on("roomList",function(data){
@@ -65,7 +73,7 @@ socketio.on("roomList",function(data){
 				//kick out user
 				//ban user
 				}else{
-					uiOpts += "you";
+					uiOpts += "you(" + username + ")";
 				}
 				uiOpts += '</div>';
 				uicon.innerHTML = uiOpts;
@@ -240,7 +248,7 @@ function ban(u, rid){
     <div id="chat">
 		<div id="chatlog"></div>
         <div id="minput">
-        	<textarea id="mtext" placeholder="write your message here"></textarea>
+        	<textarea id="mtext" placeholder="write your message here. hit enter to send"></textarea>
         </div>
     </div>      
     <div id="addRoom">
